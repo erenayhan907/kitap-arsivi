@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#1a1a1a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Kitap Arşivi" />
+  <title>Kitap Arşivi</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f0e0c;
+      --surface: #1c1b18;
+      --surface2: #252420;
+      --border: rgba(255,255,255,0.08);
+      --border2: rgba(255,255,255,0.14);
+      --text: #f0ece4;
+      --text2: #9c9890;
+      --text3: #5c5a56;
+      --accent: #c9a96e;
+      --accent-bg: rgba(201,169,110,0.12);
+      --success: #6eb88a;
+      --success-bg: rgba(110,184,138,0.12);
+      --danger: #e07070;
+      --danger-bg: rgba(224,112,112,0.12);
+      --info: #7aaee0;
+      --info-bg: rgba(122,174,224,0.12);
+      --radius: 14px;
+      --radius-sm: 8px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; overflow: hidden; }
+
+    .app { display: flex; flex-direction: column; height: 100%; max-width: 480px; margin: 0 auto; }
+
+    /* Header */
+    .header { padding: env(safe-area-inset-top, 16px) 20px 0; padding-top: calc(env(safe-area-inset-top, 0px) + 16px); }
+    .header-inner { display: flex; align-items: center; justify-content: space-between; padding-bottom: 16px; border-bottom: 0.5px solid var(--border); }
+    .header h1 { font-family: 'Lora', serif; font-size: 22px; font-weight: 400; color: var(--text); letter-spacing: -0.3px; }
+    .header .count { font-size: 12px; color: var(--text3); background: var(--surface2); padding: 4px 10px; border-radius: 20px; }
+
+    /* Tabs */
+    .tabs { display: flex; padding: 14px 20px 0; gap: 20px; }
+    .tab-btn { background: none; border: none; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 400; color: var(--text3); cursor: pointer; padding: 0 0 10px; border-bottom: 2px solid transparent; transition: all 0.2s; }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500; }
+
+    /* Content */
+    .content { flex: 1; overflow-y: auto; padding: 16px 20px; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); -webkit-overflow-scrolling: touch; }
+    .section { display: none; }
+    .section.active { display: block; }
+
+    /* Camera area */
+    .camera-wrap { border: 1.5px dashed var(--border2); border-radius: var(--radius); overflow: hidden; margin-bottom: 16px; background: var(--surface); cursor: pointer; min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 24px; transition: border-color 0.2s; position: relative; }
+    .camera-wrap:active { border-color: var(--accent); }
+    .camera-wrap.has-img { padding: 0; min-height: 200px; }
+    .cam-icon { font-size: 28px; }
+    .cam-label { font-size: 14px; color: var(--text2); }
+    .cam-sub { font-size: 12px; color: var(--text3); text-align: center; }
+    #previewImg { width: 100%; height: 100%; object-fit: cover; display: none; border-radius: var(--radius); }
+    #fileInput { display: none; }
+
+    .change-photo { position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.6); color: #fff; font-size: 12px; padding: 5px 10px; border-radius: 20px; backdrop-filter: blur(4px); display: none; }
+
+    /* Fields */
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 12px; color: var(--text3); margin-bottom: 6px; letter-spacing: 0.3px; text-transform: uppercase; }
+    .field input, .field textarea {
+      width: 100%; padding: 12px 14px;
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-family: 'DM Sans', sans-serif; font-size: 15px;
+      transition: border-color 0.2s; outline: none;
+    }
+    .field input:focus, .field textarea:focus { border-color: var(--border2); }
+    .field textarea { resize: none; min-height: 100px; line-height: 1.6; }
+    ::placeholder { color: var(--text3); }
+
+    .ai-status { font-size: 13px; padding: 10px 14px; border-radius: var(--radius-sm); margin-bottom: 14px; display: none; }
+    .ai-status.loading { background: var(--info-bg); color: var(--info); display: block; }
+    .ai-status.success { background: var(--success-bg); color: var(--success); display: block; }
+    .ai-status.error { background: var(--danger-bg); color: var(--danger); display: block; }
+
+    .save-btn {
+      width: 100%; padding: 14px;
+      background: var(--accent); color: #1a1408;
+      border: none; border-radius: var(--radius-sm);
+      font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500;
+      cursor: pointer; transition: opacity 0.15s; margin-top: 4px;
+    }
+    .save-btn:active { opacity: 0.8; }
+    .save-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* Archive */
+    .filter-row { display: flex; gap: 8px; margin-bottom: 16px; }
+    .filter-row input {
+      flex: 1; padding: 10px 12px;
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none;
+    }
+    .clear-btn { padding: 10px 14px; background: none; border: 0.5px solid var(--border); border-radius: var(--radius-sm); color: var(--text3); font-size: 13px; cursor: pointer; white-space: nowrap; }
+
+    .entry-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; cursor: pointer; transition: border-color 0.2s; }
+    .entry-card:active { border-color: var(--border2); }
+    .entry-top { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
+    .entry-info { flex: 1; }
+    .entry-book { font-family: 'Lora', serif; font-size: 15px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+    .entry-date { font-size: 12px; color: var(--text3); }
+    .entry-thumb { width: 46px; height: 46px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+    .entry-excerpt { font-size: 13px; color: var(--text2); line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .empty { text-align: center; padding: 48px 16px; color: var(--text3); font-size: 14px; line-height: 1.8; }
+    .empty-icon { font-size: 36px; margin-bottom: 12px; }
+
+    /* Modal */
+    .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; align-items: flex-end; justify-content: center; }
+    .modal-bg.open { display: flex; }
+    .modal { background: var(--surface); border-radius: var(--radius) var(--radius) 0 0; padding: 20px; padding-bottom: calc(env(safe-area-inset-bottom,0px) + 20px); max-height: 88vh; overflow-y: auto; width: 100%; max-width: 480px; -webkit-overflow-scrolling: touch; }
+    .modal-handle { width: 36px; height: 4px; background: var(--border2); border-radius: 2px; margin: 0 auto 20px; }
+    .modal-book { font-family: 'Lora', serif; font-size: 20px; font-weight: 500; margin-bottom: 4px; }
+    .modal-date { font-size: 13px; color: var(--text3); margin-bottom: 16px; }
+    .modal-img { width: 100%; border-radius: var(--radius-sm); margin-bottom: 16px; }
+    .modal-text { font-size: 14px; line-height: 1.8; color: var(--text2); white-space: pre-wrap; }
+    .del-btn { margin-top: 20px; width: 100%; padding: 12px; background: var(--danger-bg); color: var(--danger); border: none; border-radius: var(--radius-sm); font-size: 14px; font-family: 'DM Sans', sans-serif; cursor: pointer; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-inner">
+      <h1>Kitap Arşivim</h1>
+      <span class="count" id="entryCount">0 kayıt</span>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="showTab('kaydet')">Yeni Kayıt</button>
+      <button class="tab-btn" onclick="showTab('arsiv')">Arşiv</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Kaydet -->
+    <div id="kaydet" class="section active">
+      <div class="camera-wrap" id="cameraWrap" onclick="document.getElementById('fileInput').click()">
+        <div class="cam-icon">📷</div>
+        <div class="cam-label">Fotoğraf çek veya seç</div>
+        <div class="cam-sub">Sayfa veya altı çizili bölümün fotoğrafını ekle</div>
+        <img id="previewImg" src="" alt="" />
+        <div class="change-photo" id="changePhoto">Değiştir</div>
+      </div>
+      <input type="file" id="fileInput" accept="image/*" capture="environment" onchange="handleFile(event)" />
+
+      <div class="ai-status" id="aiStatus"></div>
+
+      <div class="field">
+        <label>Kitap adı</label>
+        <input type="text" id="bookName" placeholder="örn. Suç ve Ceza" />
+      </div>
+      <div class="field">
+        <label>Tarih</label>
+        <input type="date" id="entryDate" />
+      </div>
+      <div class="field">
+        <label>Okunan metin (yapay zeka tarafından tanındı)</label>
+        <textarea id="extractedText" placeholder="Fotoğraf yükleyince metin otomatik tanınacak, veya kendin de yazabilirsin..."></textarea>
+      </div>
+      <button class="save-btn" onclick="saveEntry()">Arşive Kaydet</button>
+    </div>
+
+    <!-- Arşiv -->
+    <div id="arsiv" class="section">
+      <div class="filter-row">
+        <input type="text" id="searchBook" placeholder="Kitap ara..." oninput="renderArchive()" />
+        <input type="date" id="filterDate" oninput="renderArchive()" style="max-width:150px;" />
+        <button class="clear-btn" onclick="clearFilters()">Temizle</button>
+      </div>
+      <div id="archiveList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-bg" id="modalBg" onclick="bgClick(event)">
+  <div class="modal" id="modalContent">
+    <div class="modal-handle"></div>
+  </div>
+</div>
+
+<script>
+const API_KEY = 'BURAYA_API_KEY_GELECEK';
+let entries = [];
+let currentB64 = null;
+let currentMime = 'image/jpeg';
+
+const DB_KEY = 'kitap_arsiv_v1';
+
+function loadEntries() {
+  try { entries = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); } catch(e) { entries = []; }
+  updateCount();
+}
+function saveEntries() {
+  localStorage.setItem(DB_KEY, JSON.stringify(entries));
+}
+function updateCount() {
+  document.getElementById('entryCount').textContent = entries.length + ' kayıt';
+}
+
+document.getElementById('entryDate').value = new Date().toISOString().split('T')[0];
+
+function showTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', (i===0&&tab==='kaydet')||(i===1&&tab==='arsiv')));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById(tab).classList.add('active');
+  if (tab === 'arsiv') renderArchive();
+}
+
+function handleFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  currentMime = file.type || 'image/jpeg';
+  const reader = new FileReader();
+  reader.onload = async ev => {
+    const dataUrl = ev.target.result;
+    currentB64 = dataUrl.split(',')[1];
+    const img = document.getElementById('previewImg');
+    img.src = dataUrl;
+    img.style.display = 'block';
+    const wrap = document.getElementById('cameraWrap');
+    wrap.classList.add('has-img');
+    wrap.querySelector('.cam-icon').style.display = 'none';
+    wrap.querySelector('.cam-label').style.display = 'none';
+    wrap.querySelector('.cam-sub').style.display = 'none';
+    document.getElementById('changePhoto').style.display = 'block';
+    await extractText(currentB64, currentMime);
+  };
+  reader.readAsDataURL(file);
+}
+
+async function extractText(b64, mime) {
+  const st = document.getElementById('aiStatus');
+  st.className = 'ai-status loading';
+  st.textContent = 'Yapay zeka metni okuyor...';
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: [
+          { type: 'image', source: { type: 'base64', media_type: mime, data: b64 } },
+          { type: 'text', text: 'Bu kitap sayfasındaki metni tam olarak yaz. Sadece metni ver, başka hiçbir şey yazma. Altı çizili veya işaretli kısımlar varsa onları da dahil et.' }
+        ]}]
+      })
+    });
+    const data = await resp.json();
+    const text = data.content?.map(c => c.text||'').join('') || '';
+    document.getElementById('extractedText').value = text;
+    st.className = 'ai-status success';
+    st.textContent = 'Metin başarıyla okundu. İstersen düzenleyebilirsin.';
+  } catch(err) {
+    st.className = 'ai-status error';
+    st.textContent = 'Metin okunamadı. Kendin de girebilirsin.';
+  }
+}
+
+function saveEntry() {
+  const book = document.getElementById('bookName').value.trim();
+  const date = document.getElementById('entryDate').value;
+  const text = document.getElementById('extractedText').value.trim();
+  if (!book) { alert('Lütfen kitap adını gir.'); return; }
+  if (!text && !currentB64) { alert('Fotoğraf yükle veya metin gir.'); return; }
+
+  const imgDataUrl = currentB64 ? 'data:' + currentMime + ';base64,' + currentB64 : null;
+  entries.unshift({ id: Date.now(), book, date, text, image: imgDataUrl });
+  saveEntries();
+  updateCount();
+  resetForm();
+
+  const st = document.getElementById('aiStatus');
+  st.className = 'ai-status success';
+  st.textContent = 'Kaydedildi!';
+  setTimeout(() => st.className = 'ai-status', 2000);
+}
+
+function resetForm() {
+  document.getElementById('bookName').value = '';
+  document.getElementById('extractedText').value = '';
+  document.getElementById('entryDate').value = new Date().toISOString().split('T')[0];
+  const img = document.getElementById('previewImg');
+  img.style.display = 'none'; img.src = '';
+  const wrap = document.getElementById('cameraWrap');
+  wrap.classList.remove('has-img');
+  wrap.querySelector('.cam-icon').style.display = '';
+  wrap.querySelector('.cam-label').style.display = '';
+  wrap.querySelector('.cam-sub').style.display = '';
+  document.getElementById('changePhoto').style.display = 'none';
+  document.getElementById('fileInput').value = '';
+  currentB64 = null;
+}
+
+function renderArchive() {
+  const bq = document.getElementById('searchBook').value.toLowerCase();
+  const dq = document.getElementById('filterDate').value;
+  const filtered = entries.filter(e => (!bq || e.book.toLowerCase().includes(bq)) && (!dq || e.date === dq));
+  const list = document.getElementById('archiveList');
+  if (!filtered.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">📚</div>Henüz kayıt yok.<br>İlk sayfanı kaydetmeye başla.</div>`;
+    return;
+  }
+  list.innerHTML = filtered.map(e => `
+    <div class="entry-card" onclick="openModal(${e.id})">
+      <div class="entry-top">
+        <div class="entry-info">
+          <div class="entry-book">${e.book}</div>
+          <div class="entry-date">${fmt(e.date)}</div>
+        </div>
+        ${e.image ? `<img class="entry-thumb" src="${e.image}" alt="" />` : ''}
+      </div>
+      <div class="entry-excerpt">${e.text || '(Yalnızca görsel)'}</div>
+    </div>
+  `).join('');
+}
+
+function fmt(d) {
+  if (!d) return '';
+  const [y,m,day] = d.split('-');
+  return `${day}.${m}.${y}`;
+}
+
+function openModal(id) {
+  const e = entries.find(x => x.id === id);
+  if (!e) return;
+  document.getElementById('modalContent').innerHTML = `
+    <div class="modal-handle"></div>
+    <div class="modal-book">${e.book}</div>
+    <div class="modal-date">${fmt(e.date)}</div>
+    ${e.image ? `<img class="modal-img" src="${e.image}" alt="" />` : ''}
+    <div class="modal-text">${e.text || '(Metin yok)'}</div>
+    <button class="del-btn" onclick="deleteEntry(${id})">Bu kaydı sil</button>
+  `;
+  document.getElementById('modalBg').classList.add('open');
+}
+
+function bgClick(ev) {
+  if (ev.target === document.getElementById('modalBg')) closeModal();
+}
+function closeModal() {
+  document.getElementById('modalBg').classList.remove('open');
+}
+
+function deleteEntry(id) {
+  if (!confirm('Bu kaydı silmek istediğinden emin misin?')) return;
+  entries = entries.filter(e => e.id !== id);
+  saveEntries();
+  updateCount();
+  closeModal();
+  renderArchive();
+}
+
+function clearFilters() {
+  document.getElementById('searchBook').value = '';
+  document.getElementById('filterDate').value = '';
+  renderArchive();
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+loadEntries();
+</script>
+</body>
+</html>
